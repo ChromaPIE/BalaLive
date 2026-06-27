@@ -33,6 +33,16 @@ SMODS = {
 local sliders = {}
 local inputs = {}
 local cycles = {}
+local localized = {}
+
+function localize(args)
+    if type(args) == 'table' and args.type == 'variable' then
+        localized[args.key] = true
+        return 'loc:' .. args.key .. ':' .. tostring(args.vars and args.vars[1] or '')
+    end
+    localized[args] = true
+    return 'loc:' .. tostring(args)
+end
 
 function create_slider(args)
     sliders[#sliders + 1] = args
@@ -102,12 +112,22 @@ assert_equal(port_input.extended_corpus, true, 'port input accepts numeric text 
 
 for _, slider in ipairs(sliders) do
     assert_true(slider.ref_value ~= 'port', 'port does not use a slider')
+    if slider.ref_value == 'joker_seconds' or slider.ref_value == 'consumable_seconds' or slider.ref_value == 'hand_seconds' then
+        assert_equal(slider.min, 0, slider.ref_value .. ' slider allows zero')
+        assert_true(slider.label:find('loc:balalive_config_', 1, true) == 1, slider.ref_value .. ' label is localized')
+    end
 end
 
-local style_label_row = find_row_with_text(tree, 'Joker rarity style')
+local style_label_row = find_row_with_text(tree, 'loc:balalive_config_rarity_style')
 assert_true(style_label_row ~= nil, 'style label row exists')
 assert_true(not contains_marker(style_label_row, 'option_cycle'), 'style cycle is not packed into the label row')
 assert_true(cycles[1] and cycles[1].ref_value == 'joker_rarity_style', 'style cycle remains bound to config')
 assert_true((cycles[1].w or 0) <= 2.8, 'style cycle is narrow enough for the config panel')
+assert_equal(cycles[1].options[1], 'loc:balalive_style_text', 'text style option is localized')
+assert_equal(cycles[1].options[2], 'loc:balalive_style_background', 'background style option is localized')
+assert_true(localized.balalive_title, 'title is localized')
+assert_true(localized.balalive_overlay_url, 'overlay URL is localized')
+assert_true(localized.balalive_port_reload, 'reload note is localized')
+assert_true(localized.balalive_config_port, 'port label is localized')
 
 print('config_ui_spec: PASS')

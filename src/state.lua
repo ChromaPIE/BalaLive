@@ -46,9 +46,9 @@ function State.normalize_config(config)
 
     return {
         port = math.floor(clamp_number(config.port, DEFAULT_CONFIG.port, 1024, 65535)),
-        joker_seconds = clamp_number(config.joker_seconds, DEFAULT_CONFIG.joker_seconds, 1, 60),
-        consumable_seconds = clamp_number(config.consumable_seconds, DEFAULT_CONFIG.consumable_seconds, 1, 60),
-        hand_seconds = clamp_number(config.hand_seconds, DEFAULT_CONFIG.hand_seconds, 1, 60),
+        joker_seconds = clamp_number(config.joker_seconds, DEFAULT_CONFIG.joker_seconds, 0, 60),
+        consumable_seconds = clamp_number(config.consumable_seconds, DEFAULT_CONFIG.consumable_seconds, 0, 60),
+        hand_seconds = clamp_number(config.hand_seconds, DEFAULT_CONFIG.hand_seconds, 0, 60),
         joker_rarity_style = style
     }
 end
@@ -75,7 +75,8 @@ local function panel_labels(localize_fn)
         jokers = first_localized_key(localize_fn, PANEL_LABEL_KEYS.jokers, 'JOKERS'),
         consumables = first_localized_key(localize_fn, PANEL_LABEL_KEYS.consumables, 'CONSUMABLES'),
         hands = first_localized_key(localize_fn, PANEL_LABEL_KEYS.hands, 'HANDS'),
-        standby = 'BALALIVE'
+        standby = first_localized_key(localize_fn, {'balalive_standby'}, 'BALALIVE'),
+        level_prefix = first_localized_key(localize_fn, {'balalive_level_prefix'}, 'Lv.')
     }
 end
 
@@ -253,7 +254,7 @@ function State.signature(snapshot)
     }
 
     local labels = snapshot.labels or {}
-    for _, label_key in ipairs({'jokers', 'consumables', 'hands', 'standby'}) do
+    for _, label_key in ipairs({'jokers', 'consumables', 'hands', 'standby', 'level_prefix'}) do
         parts[#parts + 1] = label_key
         parts[#parts + 1] = labels[label_key] or ''
     end

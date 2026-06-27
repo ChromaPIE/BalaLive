@@ -16,7 +16,9 @@ local function fake_localize(args, misc_cat)
     local labels = {
         b_jokers = 'loc:Jokers',
         b_stat_consumables = 'loc:Consumables',
-        b_poker_hands = 'loc:Hands'
+        b_poker_hands = 'loc:Hands',
+        balalive_standby = 'loc:BalaLive',
+        balalive_level_prefix = 'loc:Level '
     }
     if type(args) == 'string' and labels[args] then
         return labels[args]
@@ -69,7 +71,7 @@ local snapshot = State.build_snapshot({
     config = {
         port = 43140,
         joker_seconds = 7,
-        consumable_seconds = 3,
+        consumable_seconds = 0,
         hand_seconds = 5,
         joker_rarity_style = 'background'
     },
@@ -77,12 +79,14 @@ local snapshot = State.build_snapshot({
 })
 
 assert_equal(snapshot.config.port, 43140, 'normalizes port')
+assert_equal(snapshot.config.consumable_seconds, 0, 'allows zero to hide a panel')
 assert_equal(snapshot.config.joker_rarity_style, 'background', 'keeps configured rarity style')
 assert_equal(snapshot.in_run, true, 'detects active run from hands table')
 assert_equal(snapshot.labels.jokers, 'loc:Jokers', 'localizes joker panel label')
 assert_equal(snapshot.labels.consumables, 'loc:Consumables', 'localizes consumable panel label')
 assert_equal(snapshot.labels.hands, 'loc:Hands', 'localizes hand panel label')
-assert_equal(snapshot.labels.standby, 'BALALIVE', 'sets standby label')
+assert_equal(snapshot.labels.standby, 'loc:BalaLive', 'localizes standby label')
+assert_equal(snapshot.labels.level_prefix, 'loc:Level ', 'localizes hand level prefix')
 
 assert_equal(#snapshot.jokers.items, 3, 'merges duplicate jokers')
 assert_equal(snapshot.jokers.items[1].name, 'loc:j_joker', 'localizes joker name')
@@ -148,7 +152,7 @@ assert_true(signature_before ~= signature_after, 'signature changes when hidden 
 
 local empty = State.build_snapshot({G = {}, config = {}, localize = fake_localize})
 assert_equal(empty.in_run, false, 'missing hand table is not an active run')
-assert_equal(empty.labels.standby, 'BALALIVE', 'standby label remains available outside a run')
+assert_equal(empty.labels.standby, 'loc:BalaLive', 'standby label remains available outside a run')
 assert_equal(#empty.jokers.items, 0, 'missing joker area is empty')
 assert_equal(#empty.consumables.items, 0, 'missing consumable area is empty')
 assert_equal(#empty.hands.items, 0, 'missing hand table is empty')

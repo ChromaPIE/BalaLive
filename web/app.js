@@ -7,9 +7,9 @@
   const list = document.getElementById("balalive-list");
 
   const PANELS = [
-    { id: "jokers", fallback: "JOKERS", secondsKey: "joker_seconds" },
-    { id: "consumables", fallback: "CONSUMABLES", secondsKey: "consumable_seconds" },
-    { id: "hands", fallback: "HANDS", secondsKey: "hand_seconds" }
+    { id: "jokers", secondsKey: "joker_seconds" },
+    { id: "consumables", secondsKey: "consumable_seconds" },
+    { id: "hands", secondsKey: "hand_seconds" }
   ];
 
   let state = null;
@@ -26,12 +26,26 @@
 
   function panelLabel(panelDef) {
     const labels = state && state.labels;
-    return labels && labels[panelDef.id] ? labels[panelDef.id] : panelDef.fallback;
+    return labels && labels[panelDef.id] ? labels[panelDef.id] : "";
   }
 
   function standbyLabel() {
     const labels = state && state.labels;
-    return labels && labels.standby ? labels.standby : "BALALIVE";
+    return labels && labels.standby ? labels.standby : "";
+  }
+
+  function levelPrefix() {
+    const labels = state && state.labels;
+    return labels && labels.level_prefix ? labels.level_prefix : "";
+  }
+
+  function panelEnabled(panelDef) {
+    const seconds = Number(state && state.config && state.config[panelDef.secondsKey]);
+    return Number.isFinite(seconds) ? seconds > 0 : true;
+  }
+
+  function enabledPanels() {
+    return PANELS.filter(panelEnabled);
   }
 
   function panelState(panelId) {
@@ -42,12 +56,12 @@
 
   function dwellMs(panelDef) {
     const seconds = Number(state && state.config && state.config[panelDef.secondsKey]);
-    return Math.max(1, Number.isFinite(seconds) ? seconds : 5) * 1000;
+    return (Number.isFinite(seconds) && seconds > 0 ? seconds : 5) * 1000;
   }
 
   function itemValue(item, panelId) {
     if (panelId === "hands") {
-      return "Lv." + String(item.level || 1);
+      return levelPrefix() + String(item.level || 1);
     }
     return item.count && item.count > 1 ? "X" + String(item.count) : "";
   }
@@ -207,11 +221,11 @@
     panel.classList.add("is-leaving");
     window.setTimeout(() => {
       if (token !== switchToken) return;
-      if (inRun()) {
+      if (inRun() && enabledPanels().length > 0) {
         panel.classList.remove("is-leaving");
         root.classList.remove("is-standby");
         switching = false;
-        renderList(PANELS[activeIndex], false);
+        renderList(enabledPanels()[activeIndex] || enabledPanels()[0], false);
         scheduleRotation();
         return;
       }
@@ -234,12 +248,14 @@
     root.classList.toggle("joker-rarity-background", style === "background");
     root.classList.toggle("joker-rarity-text", style !== "background");
 
-    if (!inRun()) {
+    const panels = enabledPanels();
+    if (!inRun() || panels.length === 0) {
       showStandby(true);
       return;
     }
 
-    const panelDef = PANELS[activeIndex];
+    if (activeIndex >= panels.length) activeIndex = 0;
+    const panelDef = panels[activeIndex];
     if (standbyActive) {
       showPanel(activeIndex, true);
       return;
@@ -252,26 +268,29 @@
   }
 
   function showPanel(index, animateAll) {
-    if (!state || !inRun() || switching) return;
+    const panels = enabledPanels();
+    if (!state || !inRun() || switching || panels.length === 0) return;
     switching = true;
     root.classList.remove("is-standby");
 
-    const nextIndex = index % PANELS.length;
-    const panelDef = PANELS[nextIndex];
+    const nextIndex = index % panels.length;
     const token = ++switchToken;
     panel.classList.add("is-leaving");
 
     window.setTimeout(() => {
       if (token !== switchToken) return;
-      if (!inRun()) {
+      const nextPanels = enabledPanels();
+      if (!inRun() || nextPanels.length === 0) {
         panel.classList.remove("is-leaving");
         switching = false;
         showStandby(false);
         return;
       }
 
+      const panelIndex = index % nextPanels.length;
+      const panelDef = nextPanels[panelIndex];
       standbyActive = false;
-      activeIndex = nextIndex;
+      activeIndex = panelIndex;
       panel.dataset.panel = panelDef.id;
       title.textContent = panelLabel(panelDef);
       list.replaceChildren();
@@ -285,10 +304,13 @@
 
   function scheduleRotation() {
     window.clearTimeout(rotationTimer);
-    if (!state || !inRun() || standbyActive) return;
+    const panels = enabledPanels();
+    if (!state || !inRun() || standbyActive || panels.length === 0) return;
+    if (activeIndex >= panels.length) activeIndex = 0;
+    if (panels.length <= 1) return;
     rotationTimer = window.setTimeout(() => {
       showPanel(activeIndex + 1, true);
-    }, dwellMs(PANELS[activeIndex]));
+    }, dwellMs(panels[activeIndex]));
   }
 
   function fetchStateFallback() {
@@ -320,6 +342,6 @@
     source.onerror = fetchStateFallback;
   }
 
-  title.textContent = "BALALIVE";
+  title.textContent = "";
   connectEvents();
 })();

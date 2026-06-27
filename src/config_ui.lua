@@ -1,10 +1,40 @@
 local ConfigUI = {}
 
-local STYLE_OPTIONS = {'Text color', 'Background'}
 local STYLE_VALUES = {'text', 'background'}
 
 local function style_option_index(style)
     return style == 'background' and 2 or 1
+end
+
+local function loc(key, fallback)
+    if type(localize) == 'function' then
+        local ok, value = pcall(localize, key)
+        if ok and type(value) == 'string' and value ~= '' and value ~= 'ERROR' and value ~= key then
+            return value
+        end
+    end
+    return fallback or key
+end
+
+local function loc_var(key, vars, fallback)
+    if type(localize) == 'function' then
+        local ok, value = pcall(localize, {type = 'variable', key = key, vars = vars or {}})
+        if ok and type(value) == 'string' and value ~= '' and value ~= 'ERROR' then
+            return value
+        end
+    end
+    local text = fallback or key
+    for index, value in ipairs(vars or {}) do
+        text = text:gsub('#' .. tostring(index) .. '#', tostring(value))
+    end
+    return text
+end
+
+local function style_options()
+    return {
+        loc('balalive_style_text', 'Text color'),
+        loc('balalive_style_background', 'Background')
+    }
 end
 
 local function save_config(mod)
@@ -34,7 +64,7 @@ local function port_input(config)
         n = G.UIT.R,
         config = {align = 'cm', padding = 0.04},
         nodes = {
-            {n = G.UIT.T, config = {text = 'Port', scale = 0.35, colour = G.C.UI.TEXT_LIGHT}},
+            {n = G.UIT.T, config = {text = loc('balalive_config_port', 'Port'), scale = 0.35, colour = G.C.UI.TEXT_LIGHT}},
             create_text_input({
                 id = 'balalive_port',
                 ref_table = config,
@@ -86,18 +116,18 @@ function ConfigUI.install(mod, State)
             n = G.UIT.ROOT,
             config = {align = 'cm', padding = 0.08, colour = G.C.CLEAR},
             nodes = {
-                label('BalaLive', 0.5, G.C.BLUE),
-                label('Overlay URL: http://localhost:' .. tostring(mod.config.port) .. '/', 0.3, G.C.UI.TEXT_LIGHT),
-                label('Port changes apply after reload.', 0.25, G.C.UI.TEXT_INACTIVE),
+                label(loc('balalive_title', 'BalaLive'), 0.5, G.C.BLUE),
+                label(loc_var('balalive_overlay_url', {tostring(mod.config.port)}, 'Overlay URL: http://localhost:#1#/'), 0.3, G.C.UI.TEXT_LIGHT),
+                label(loc('balalive_port_reload', 'Port changes apply after reload.'), 0.25, G.C.UI.TEXT_INACTIVE),
                 port_input(mod.config),
-                slider('Joker seconds', mod.config, 'joker_seconds', 1, 30, 4),
-                slider('Consumable seconds', mod.config, 'consumable_seconds', 1, 30, 4),
-                slider('Hand seconds', mod.config, 'hand_seconds', 1, 30, 4),
+                slider(loc('balalive_config_joker_seconds', 'Joker seconds'), mod.config, 'joker_seconds', 0, 30, 4),
+                slider(loc('balalive_config_consumable_seconds', 'Consumable seconds'), mod.config, 'consumable_seconds', 0, 30, 4),
+                slider(loc('balalive_config_hand_seconds', 'Hand seconds'), mod.config, 'hand_seconds', 0, 30, 4),
                 {
                     n = G.UIT.R,
                     config = {align = 'cm', padding = 0.03},
                     nodes = {
-                        {n = G.UIT.T, config = {text = 'Joker rarity style', scale = 0.35, colour = G.C.UI.TEXT_LIGHT}}
+                        {n = G.UIT.T, config = {text = loc('balalive_config_rarity_style', 'Joker rarity style'), scale = 0.35, colour = G.C.UI.TEXT_LIGHT}}
                     }
                 },
                 {
@@ -105,7 +135,7 @@ function ConfigUI.install(mod, State)
                     config = {align = 'cm', padding = 0.03},
                     nodes = {
                         create_option_cycle({
-                            options = STYLE_OPTIONS,
+                            options = style_options(),
                             current_option = style_option_index(mod.config.joker_rarity_style),
                             opt_callback = 'balalive_style_cycle',
                             ref_table = mod.config,
