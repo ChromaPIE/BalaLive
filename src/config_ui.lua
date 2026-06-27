@@ -29,6 +29,28 @@ local function slider(label, config, key, min, max, width)
     })
 end
 
+local function port_input(config)
+    return {
+        n = G.UIT.R,
+        config = {align = 'cm', padding = 0.04},
+        nodes = {
+            {n = G.UIT.T, config = {text = 'Port', scale = 0.35, colour = G.C.UI.TEXT_LIGHT}},
+            create_text_input({
+                id = 'balalive_port',
+                ref_table = config,
+                ref_value = 'port',
+                prompt_text = tostring(config.port or ''),
+                max_length = 5,
+                extended_corpus = true,
+                w = 1.35,
+                h = 0.42,
+                text_scale = 0.32,
+                colour = G.C.BLUE
+            })
+        }
+    }
+end
+
 local function label(text, scale, colour)
     return {
         n = G.UIT.R,
@@ -67,15 +89,21 @@ function ConfigUI.install(mod, State)
                 label('BalaLive', 0.5, G.C.BLUE),
                 label('Overlay URL: http://localhost:' .. tostring(mod.config.port) .. '/', 0.3, G.C.UI.TEXT_LIGHT),
                 label('Port changes apply after reload.', 0.25, G.C.UI.TEXT_INACTIVE),
-                slider('Port', mod.config, 'port', 1024, 65535, 5),
+                port_input(mod.config),
                 slider('Joker seconds', mod.config, 'joker_seconds', 1, 30, 4),
                 slider('Consumable seconds', mod.config, 'consumable_seconds', 1, 30, 4),
                 slider('Hand seconds', mod.config, 'hand_seconds', 1, 30, 4),
                 {
                     n = G.UIT.R,
-                    config = {align = 'cm', padding = 0.08},
+                    config = {align = 'cm', padding = 0.03},
                     nodes = {
-                        {n = G.UIT.T, config = {text = 'Joker rarity style', scale = 0.35, colour = G.C.UI.TEXT_LIGHT}},
+                        {n = G.UIT.T, config = {text = 'Joker rarity style', scale = 0.35, colour = G.C.UI.TEXT_LIGHT}}
+                    }
+                },
+                {
+                    n = G.UIT.R,
+                    config = {align = 'cm', padding = 0.03},
+                    nodes = {
                         create_option_cycle({
                             options = STYLE_OPTIONS,
                             current_option = style_option_index(mod.config.joker_rarity_style),
@@ -83,9 +111,9 @@ function ConfigUI.install(mod, State)
                             ref_table = mod.config,
                             ref_value = 'joker_rarity_style',
                             values = STYLE_VALUES,
-                            w = 3.2,
+                            w = 2.55,
                             h = 0.45,
-                            text_scale = 0.32,
+                            text_scale = 0.3,
                             colour = G.C.BLUE,
                             no_pips = true,
                             focus_args = {snap_to = true, nav = 'wide'}

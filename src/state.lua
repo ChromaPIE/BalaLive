@@ -26,6 +26,12 @@ local VANILLA_RARITY_COLOUR_KEYS = {
     legendary = 4
 }
 
+local PANEL_LABEL_KEYS = {
+    jokers = {'b_jokers', 'b_stat_jokers', 'k_jokers'},
+    consumables = {'b_stat_consumables', 'b_consumables', 'k_consumables'},
+    hands = {'b_poker_hands', 'k_poker_hands'}
+}
+
 local function clamp_number(value, default, min, max)
     value = tonumber(value)
     if not value then return default end
@@ -54,6 +60,31 @@ local function safe_localize(localize_fn, args, misc_cat, fallback)
         return value
     end
     return fallback
+end
+
+local function first_localized_key(localize_fn, keys, fallback)
+    for _, key in ipairs(keys or {}) do
+        local value = safe_localize(localize_fn, key, nil, nil)
+        if value and value ~= key then return value end
+    end
+    return fallback
+end
+
+local function panel_labels(localize_fn)
+    return {
+        jokers = first_localized_key(localize_fn, PANEL_LABEL_KEYS.jokers, 'JOKERS'),
+        consumables = first_localized_key(localize_fn, PANEL_LABEL_KEYS.consumables, 'CONSUMABLES'),
+        hands = first_localized_key(localize_fn, PANEL_LABEL_KEYS.hands, 'HANDS'),
+        standby = 'BALALIVE'
+    }
+end
+
+local function is_in_run(g)
+    if type(g) ~= 'table' then return false end
+    if type(g.STAGES) == 'table' and g.STAGES.RUN ~= nil and g.STAGE ~= nil then
+        return g.STAGE == g.STAGES.RUN
+    end
+    return type(g.GAME) == 'table' and type(g.GAME.hands) == 'table'
 end
 
 local function css_key(value)
@@ -175,13 +206,17 @@ function State.build_snapshot(args)
     local g = args.G or rawget(_G, 'G') or {}
     local config = State.normalize_config(args.config or (rawget(_G, 'SMODS') and SMODS.current_mod and SMODS.current_mod.config) or {})
     local localize_fn = args.localize or rawget(_G, 'localize')
+    local in_run = is_in_run(g)
+    local labels = panel_labels(localize_fn)
 
-    local jokers = g.jokers and g.jokers.cards or {}
-    local consumables = g.consumeables and g.consumeables.cards or {}
-    local hands = g.GAME and g.GAME.hands or {}
+    local jokers = in_run and g.jokers and g.jokers.cards or {}
+    local consumables = in_run and g.consumeables and g.consumeables.cards or {}
+    local hands = in_run and g.GAME and g.GAME.hands or {}
 
     return {
         config = config,
+        in_run = in_run,
+        labels = labels,
         jokers = {
             id = 'jokers',
             items = collect_cards(jokers, localize_fn, true, g)
@@ -213,8 +248,15 @@ function State.signature(snapshot)
         tostring(config.joker_seconds or ''),
         tostring(config.consumable_seconds or ''),
         tostring(config.hand_seconds or ''),
-        tostring(config.joker_rarity_style or '')
+        tostring(config.joker_rarity_style or ''),
+        tostring(snapshot.in_run == true)
     }
+
+    local labels = snapshot.labels or {}
+    for _, label_key in ipairs({'jokers', 'consumables', 'hands', 'standby'}) do
+        parts[#parts + 1] = label_key
+        parts[#parts + 1] = labels[label_key] or ''
+    end
 
     for _, panel_key in ipairs({'jokers', 'consumables', 'hands'}) do
         local panel = snapshot[panel_key] or {}
