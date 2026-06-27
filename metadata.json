@@ -1,0 +1,15 @@
+{
+  "id": "balalive",
+  "name": "BalaLive",
+  "display_name": "BalaLive",
+  "prefix": "balalive",
+  "author": ["ChromaPIE"],
+  "description": "A localhost OBS overlay for current Balatro run state.",
+  "main_file": "main.lua",
+  "priority": 0,
+  "badge_colour": "13afce",
+  "version": "0.1.0",
+  "dependencies": [
+    "Steamodded (>=1.0.0~BETA-1221a)"
+  ]
+}
