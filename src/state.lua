@@ -62,6 +62,39 @@ local function safe_localize(localize_fn, args, misc_cat, fallback)
     return fallback
 end
 
+local function simple_display_text(value)
+    local value_type = type(value)
+    if value_type == 'string' then
+        return value ~= '' and not value:match('^table: 0x[%da-fA-F]+$') and value or nil
+    end
+    if value_type == 'number' or value_type == 'boolean' then return tostring(value) end
+    if value_type == 'table' then
+        local ok, text = pcall(tostring, value)
+        if ok and type(text) == 'string' and text ~= '' and not text:match('^table: 0x[%da-fA-F]+$') then
+            return text
+        end
+    end
+    return nil
+end
+
+local function formatted_display_text(value)
+    local number_format = rawget(_G, 'number_format')
+    if type(number_format) == 'function' then
+        local ok, formatted = pcall(number_format, value)
+        local text = ok and simple_display_text(formatted)
+        if text then return text end
+    end
+
+    local format_ui_value = rawget(_G, 'format_ui_value')
+    if type(format_ui_value) == 'function' then
+        local ok, formatted = pcall(format_ui_value, value)
+        local text = ok and simple_display_text(formatted)
+        if text then return text end
+    end
+
+    return simple_display_text(value)
+end
+
 local function first_localized_key(localize_fn, keys, fallback)
     for _, key in ipairs(keys or {}) do
         local value = safe_localize(localize_fn, key, nil, nil)
@@ -129,13 +162,57 @@ local function rarity_info(center, g)
     }
 end
 
-local function card_name(center, localize_fn)
-    return safe_localize(
+local function fill_loc_placeholders(text, vars)
+    if type(text) ~= 'string' or type(vars) ~= 'table' then return text end
+    return (text:gsub('#(%d+)#', function(index)
+        return formatted_display_text(vars[tonumber(index)]) or ('#' .. index .. '#')
+    end))
+end
+
+local function has_loc_placeholders(text)
+    return type(text) == 'string' and text:find('#%d+#') ~= nil
+end
+
+local function card_loc_target(center, card)
+    local target = {
+        set = center.set or 'Joker',
+        key = center.key,
+        vars = center.name_vars or center.vars
+    }
+
+    if type(center.loc_vars) == 'function' then
+        local ok, result = pcall(center.loc_vars, center, {}, card)
+        if ok and type(result) == 'table' then
+            target.set = result.name_set or result.set or target.set
+            target.key = result.name_key or result.key or target.key
+            target.vars = result.name_vars or result.vars or target.vars
+        end
+    end
+
+    return target
+end
+
+local function card_name(center, localize_fn, card)
+    local fallback = center.name or center.key
+    local name = safe_localize(
         localize_fn,
-        {type = 'name_text', set = center.set or 'Joker', key = center.key},
+        {type = 'name_text', set = center.set or 'Joker', key = center.key, vars = center.name_vars or center.vars or {}},
         nil,
-        center.name or center.key
+        fallback
     )
+
+    name = fill_loc_placeholders(name, center.name_vars or center.vars)
+    if not has_loc_placeholders(name) then return name end
+
+    local target = card_loc_target(center, card)
+    name = safe_localize(
+        localize_fn,
+        {type = 'name_text', set = target.set, key = target.key, vars = target.vars or {}},
+        nil,
+        name
+    )
+
+    return fill_loc_placeholders(name, target.vars)
 end
 
 local function collect_cards(cards, localize_fn, include_rarity, g)
@@ -146,7 +223,7 @@ local function collect_cards(cards, localize_fn, include_rarity, g)
         local center = card and card.config and card.config.center
         if center and center.key then
             local set = center.set or 'Unknown'
-            local name = card_name(center, localize_fn)
+            local name = card_name(center, localize_fn, card)
             local id = set .. ':' .. center.key
             local item = by_id[id]
 
@@ -184,7 +261,7 @@ local function hand_items(hands, localize_fn)
                 id = 'hand:' .. key,
                 key = key,
                 name = safe_localize(localize_fn, key, 'poker_hands', key),
-                level = tonumber(hand.level) or 1,
+                level = formatted_display_text(hand.level) or '1',
                 order = tonumber(hand.order) or 999
             }
         end
