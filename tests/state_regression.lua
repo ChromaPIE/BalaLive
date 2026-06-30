@@ -18,6 +18,12 @@ local function localize(args, misc_cat)
         if args.set == 'Joker' and args.key == 'j_worm_tbp_spaceship' then
             return '#2#'
         end
+        if args.set == 'worm_tlr_constellation' and args.key == 'c_worm_tlr_const_orion_t3' then
+            return 'Bright Orion'
+        end
+        if args.set == 'worm_tlr_constellation' and args.key == 'c_worm_tlr_const_orion' then
+            return 'ERROR'
+        end
         return args.key
     end
     if misc_cat == 'poker_hands' then return args end
@@ -95,6 +101,35 @@ local spaceship_snapshot = State.build_snapshot({
 })
 
 expect_equal(spaceship_snapshot.jokers.items[1].name, 'Modular Spaceship', 'expands card name placeholders from loc_vars')
+
+local constellation_center = {
+    key = 'c_worm_tlr_const_orion',
+    set = 'worm_tlr_constellation',
+    loc_vars = function(self, info_queue, card)
+        return {
+            key = self.key .. '_t' .. card.ability.tier,
+            vars = {colours = {}}
+        }
+    end
+}
+
+local constellation_snapshot = State.build_snapshot({
+    localize = localize,
+    G = {
+        GAME = {hands = {}},
+        jokers = {cards = {}},
+        consumeables = {
+            cards = {
+                {
+                    config = {center = constellation_center},
+                    ability = {tier = 3}
+                }
+            }
+        }
+    }
+})
+
+expect_equal(constellation_snapshot.consumables.items[1].name, 'Bright Orion', 'uses loc_vars remapped keys for dynamic card names')
 
 if #failures > 0 then
     error(table.concat(failures, '\n'), 0)

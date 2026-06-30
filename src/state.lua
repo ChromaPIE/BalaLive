@@ -202,7 +202,9 @@ local function card_name(center, localize_fn, card)
     )
 
     name = fill_loc_placeholders(name, center.name_vars or center.vars)
-    if not has_loc_placeholders(name) then return name end
+    if not has_loc_placeholders(name) and not (name == fallback and fallback == center.key and type(center.loc_vars) == 'function') then
+        return name
+    end
 
     local target = card_loc_target(center, card)
     name = safe_localize(
